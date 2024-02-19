@@ -1,8 +1,8 @@
 import torch
 from abc import abstractmethod
 from numpy import inf
-from logger import TensorboardWriter
-
+import wandb
+import os
 
 class BaseTrainer:
     """
@@ -10,7 +10,6 @@ class BaseTrainer:
     """
     def __init__(self, model, criterion, metric_ftns, optimizer, config):
         self.config = config
-        self.logger = config.get_logger('trainer', config['trainer']['verbosity'])
 
         self.model = model
         self.criterion = criterion
@@ -19,7 +18,6 @@ class BaseTrainer:
 
         cfg_trainer = config['trainer']
         self.epochs = cfg_trainer['epochs']
-        self.save_period = cfg_trainer['save_period']
         self.monitor = cfg_trainer.get('monitor', 'off')
 
         # configuration to monitor model performance and save best
@@ -29,6 +27,10 @@ class BaseTrainer:
         else:
             self.mnt_mode, self.mnt_metric = self.monitor.split()
             assert self.mnt_mode in ['min', 'max']
+            if not self.mnt_metric in ['train_loss', 'val_loss']:
+                raise ValueError("Unsupported metric: {} for monitoring".format(self.mnt_metric))
+            else:
+                print("Monitoring metric: {}".format(self.monitor))
 
             self.mnt_best = inf if self.mnt_mode == 'min' else -inf
             self.early_stop = cfg_trainer.get('early_stop', inf)
@@ -36,14 +38,11 @@ class BaseTrainer:
                 self.early_stop = inf
 
         self.start_epoch = 1
-
-        self.checkpoint_dir = config.save_dir
-
-        # setup visualization writer instance                
-        self.writer = TensorboardWriter(config.log_dir, self.logger, cfg_trainer['tensorboard'])
+        self.save_period = cfg_trainer.get('save_period', self.epochs//10)
 
         if config.resume is not None:
-            self._resume_checkpoint(config.resume)
+            raise NotImplementedError("Resume is not implemented yet")
+            # self._resume_checkpoint(config.resume)
 
     @abstractmethod
     def _train_epoch(self, epoch):
@@ -60,43 +59,31 @@ class BaseTrainer:
         """
         not_improved_count = 0
         for epoch in range(self.start_epoch, self.epochs + 1):
-            result = self._train_epoch(epoch)
-
-            # save logged informations into log dict
-            log = {'epoch': epoch}
-            log.update(result)
-
-            # print logged informations to the screen
-            for key, value in log.items():
-                self.logger.info('    {:15s}: {}'.format(str(key), value))
+            train_loss, val_loss = self._train_epoch(epoch)
 
             # evaluate model performance according to configured metric, save best checkpoint as model_best
-            best = False
             if self.mnt_mode != 'off':
-                try:
-                    # check whether model performance improved or not, according to specified metric(mnt_metric)
-                    improved = (self.mnt_mode == 'min' and log[self.mnt_metric] <= self.mnt_best) or \
-                               (self.mnt_mode == 'max' and log[self.mnt_metric] >= self.mnt_best)
-                except KeyError:
-                    self.logger.warning("Warning: Metric '{}' is not found. "
-                                        "Model performance monitoring is disabled.".format(self.mnt_metric))
-                    self.mnt_mode = 'off'
-                    improved = False
-
-                if improved:
-                    self.mnt_best = log[self.mnt_metric]
+                to_compare = val_loss if self.mnt_metric == 'val_loss' else train_loss
+                
+                if to_compare < self.mnt_best:
+                    self.mnt_best = val_loss
                     not_improved_count = 0
-                    best = True
+                    print("New best model found")
+                    self._save_checkpoint(epoch, save_best=True)
                 else:
                     not_improved_count += 1
 
+                # check early stopping condition
                 if not_improved_count > self.early_stop:
-                    self.logger.info("Validation performance didn\'t improve for {} epochs. "
-                                     "Training stops.".format(self.early_stop))
+                    print("Early stopping at epoch: ", epoch)
                     break
 
             if epoch % self.save_period == 0:
-                self._save_checkpoint(epoch, save_best=best)
+                self._save_checkpoint(epoch, save_best=False)
+            
+            print()
+        
+        self._save_checkpoint(epoch, save_best=False)
 
     def _save_checkpoint(self, epoch, save_best=False):
         """
@@ -115,13 +102,19 @@ class BaseTrainer:
             'monitor_best': self.mnt_best,
             'config': self.config
         }
-        filename = str(self.checkpoint_dir / 'checkpoint-epoch{}.pth'.format(epoch))
-        torch.save(state, filename)
-        self.logger.info("Saving checkpoint: {} ...".format(filename))
-        if save_best:
-            best_path = str(self.checkpoint_dir / 'model_best.pth')
-            torch.save(state, best_path)
-            self.logger.info("Saving current best: model_best.pth ...")
+        if save_best and self.config.with_wandb:
+            print("Saving best checkpoint")
+            path_save = str(self.config.save_dir / 'best_ckpt.pth')
+            torch.save(state, path_save)
+            wandb.save(path_save)
+        elif not save_best and self.config.with_wandb:
+            print("Saving last checkpoint")
+            path_save = str(self.config.save_dir / 'last_ckpt.pth')
+            torch.save(state, path_save)
+            wandb.save(path_save)
+        else:
+            pass
+
 
     def _resume_checkpoint(self, resume_path):
         """
@@ -129,6 +122,7 @@ class BaseTrainer:
 
         :param resume_path: Checkpoint path to be resumed
         """
+        raise NotImplementedError
         resume_path = str(resume_path)
         self.logger.info("Loading checkpoint: {} ...".format(resume_path))
         checkpoint = torch.load(resume_path)
