@@ -25,7 +25,7 @@ class ConfigParser:
         if self.with_wandb:
             print("Logging to wandb")
             wandb.init(
-                project="debug",
+                project=self._config.get("name", "default-queue"),
                 entity="data-challenge",
                 config=config
             )
@@ -41,14 +41,18 @@ class ConfigParser:
             self._save_dir = None
 
     @classmethod
-    def from_args(cls, args, options=""):
+    def from_args(cls, args, options="", notebook=None):
         """
         Initialize this class from some cli arguments. Used in train, test.
         """
-        for opt in options:
-            args.add_argument(*opt.flags, default=None, type=opt.type)
+        if options is not None:
+            for opt in options:
+                args.add_argument(*opt.flags, default=None, type=opt.type)
         if not isinstance(args, tuple):
-            args = args.parse_args()
+            if notebook is not None and isinstance(notebook, str):
+                args = args.parse_args(notebook.split())
+            else:
+                args = args.parse_args()
 
         # if args.device is not None:
             # os.environ["CUDA_VISIBLE_DEVICES"] = args.device

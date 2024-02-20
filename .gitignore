@@ -400,3 +400,5 @@ $RECYCLE.BIN/
 # also ignore this:
 
 wandb/
+notebooks/
+data/*
