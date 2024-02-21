@@ -1,7 +1,7 @@
 import torch.nn as nn
 import torch.nn.functional as F
 from base import BaseModel
-
+from torchvision.models import resnet50, ResNet50_Weights
 
 class MnistModel(BaseModel):
     def __init__(self, num_classes=10):
@@ -20,3 +20,14 @@ class MnistModel(BaseModel):
         x = F.dropout(x, training=self.training)
         x = self.fc2(x)
         return F.log_softmax(x, dim=1)
+
+
+class CustomResNet50(nn.Module):
+    def __init__(self, num_classes):
+        super(CustomResNet50, self).__init__()
+        self.resnet50 = resnet50(weights=ResNet50_Weights.DEFAULT)
+        num_ftrs = self.resnet50.fc.in_features
+        self.resnet50.fc = nn.Linear(num_ftrs, num_classes)
+
+    def forward(self, x):
+        return F.log_softmax(self.resnet50(x), dim=1)

@@ -2,12 +2,15 @@ import argparse
 import collections
 import torch
 import numpy as np
-import data_loader.data_loaders as module_data
+import data_loader.data_loaders as module_dataloaders
+import data_loader.datasets as module_datasets
 import model.loss as module_loss
 import model.metric as module_metric
 import model.model as module_arch
 from parse_config import ConfigParser
 from trainer import Trainer
+from data_loader.preprocessing import Preprocessor, resize_image, gray_to_rgb
+from data_loader.preprocessing import timesteps_to_classes, timesteps_to_one_hot
 
 # fix random seeds for reproducibility
 SEED = 123
@@ -17,15 +20,51 @@ torch.backends.cudnn.benchmark = False
 np.random.seed(SEED)
 
 def main(config):
-    # setup data_loader instances
-    # TODO: change here to load dataset from file of path
-    print("Loading dataset")
-    data_loader = config.init_obj('data_loader', module_data)
+    # 1. Preprocess data
+    if config.preprocess:
+        preprocess_data = Preprocessor(config['preprocessing']['dir_path'])
+        print("Transform x:", config['preprocessing']['transform_x'])
+        print("Transform y:", config['preprocessing']['transform_y'])
+        
+        if config['preprocessing']['transform_x'] is False:
+            transform_x = False
+        elif config['preprocessing']['transform_x'] == "resize_rgb":
+            transform_x = lambda image: gray_to_rgb(resize_image(image))
+        else:
+            raise ValueError("Invalid transform_x")
+        
+        if not config['preprocessing']['transform_y']:
+            transform_y = False
+        elif config['preprocessing']['transform_y'] == "timesteps_to_classes":
+            transform_y = timesteps_to_classes
+        elif config['preprocessing']['transform_y'] == "timesteps_to_one_hot":
+            transform_y = timesteps_to_one_hot
+        else:
+            raise ValueError("Invalid transform_y")
+        
+        images_labels_path = preprocess_data.sequences_to_images(
+            transform_x=transform_x, transform_y=transform_y
+        )
+        print()
+        
+        if config['dataset']['type'] == "FromJSON":
+            config['dataset']['args']['images_labels_path'] = images_labels_path
+
+    # 2. Create dataset
+    print("Dataset:", config['dataset']['type'])
+    print("Images labels path:", config['dataset']['args']['images_labels_path'])
+    dataset = config.init_obj('dataset', module_datasets)
+    
+    # 3. Create data_loader
+    print("Data loader:", config['dataloader']['type'])
+    data_loader = config.init_obj('dataloader', module_dataloaders, dataset)
     valid_data_loader = data_loader.split_validation()
     
-    # build model architecture, then print to console
+    print()
+    
+    # 4. Create model
+    print("Model:", config['arch']['type'])
     model = config.init_obj('arch', module_arch)
-    # logger.info(model) TODO: change here to print it correctly
 
     # prepare for (multi-device) GPU training
     # device, device_ids = prepare_device(config['n_gpu'])
@@ -44,14 +83,20 @@ def main(config):
     model = model.to(device)
     if len(device_ids) > 1:
         model = torch.nn.DataParallel(model, device_ids=device_ids)
-
-    # get function handles of loss and metrics
+    
+    print()
+    
+    # 5. Create loss, metric
+    print("Loss:", config['loss'])
     criterion = getattr(module_loss, config['loss'])
+    print("Metrics:", config['metrics'])
     metrics = [getattr(module_metric, met) for met in config['metrics']]
 
     # build optimizer, learning rate scheduler. delete every lines containing lr_scheduler for disabling scheduler
     trainable_params = filter(lambda p: p.requires_grad, model.parameters())
+    print("Optimizer:", config['optimizer']["type"])
     optimizer = config.init_obj('optimizer', torch.optim, trainable_params)
+    print("Learning rate scheduler:", config['lr_scheduler']["type"])
     lr_scheduler = config.init_obj('lr_scheduler', torch.optim.lr_scheduler, optimizer)
 
     print()
@@ -77,6 +122,8 @@ if __name__ == '__main__':
     #                   help='indices of GPUs to enable (default: all)')
     args.add_argument('--with_wandb', default=False, action='store_true',
                       help='Use wandb for logging')
+    args.add_argument('--preprocess', default=False, action='store_true',
+                      help='Preprocess data')
 
     # custom cli options to modify configuration from default values given in json file.
     CustomArgs = collections.namedtuple('CustomArgs', 'flags type target')

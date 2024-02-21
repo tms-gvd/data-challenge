@@ -106,6 +106,8 @@ class Trainer(BaseTrainer):
         if self.lr_scheduler is not None:
             self.lr_scheduler.step()
         
+        wandb.log({"train/lr": self.lr_scheduler.get_lr()}, step=self.step)
+        
         return train_loss, val_loss
 
     def _valid_epoch(self, epoch):

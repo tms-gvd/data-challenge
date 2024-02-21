@@ -101,7 +101,6 @@ ENV/
 .mypy_cache/
 
 # input data, saved log, checkpoints
-data/
 input/
 saved/
 datasets/
@@ -402,3 +401,4 @@ $RECYCLE.BIN/
 wandb/
 notebooks/
 data/*
+!data/.gitkeep

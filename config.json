@@ -1,15 +1,27 @@
 {
-    "name": "Mnist_LeNet",
+    "name": "debug",
     "device": "cpu",
 
     "arch": {
-        "type": "MnistModel",
-        "args": {}
+        "type": "CustomResNet50",
+        "args": {
+            "num_classes": 3
+        }
     },
-    "data_loader": {
-        "type": "MnistDataLoader",
+    "preprocessing": {
+        "dir_path": "data",
+        "transform_x": "resize_rgb",
+        "transform_y": false
+    },
+    "dataset": {
+        "type": "FromJSON",
+        "args": {
+            "images_labels_path": "data/split_data/train/images_labels.json"
+        }
+    },
+    "dataloader": {
+        "type": "DataloaderFromDataset",
         "args":{
-            "data_dir": "data/",
             "batch_size": 16,
             "shuffle": true,
             "validation_split": 0.2,
