@@ -18,7 +18,6 @@ torch.backends.cudnn.benchmark = False
 np.random.seed(SEED)
 
 def main(config):
-    torch.set_default_dtype(torch.float64)
 
     # 2. Create dataset
     print("Dataset:", config['dataset']['type'])
@@ -50,7 +49,7 @@ def main(config):
     print(f"Using device: {device}")
     
     # model to device
-    model = model.to(device, dtype=torch.float)
+    model = model.to(device, dtype=torch.float64)
     if len(device_ids) > 1:
         model = torch.nn.DataParallel(model, device_ids=device_ids)
     
