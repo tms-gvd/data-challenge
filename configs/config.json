@@ -8,15 +8,10 @@
             "num_classes": 3
         }
     },
-    "preprocessing": {
-        "dir_path": "data",
-        "transform_x": "resize_rgb",
-        "transform_y": false
-    },
     "dataset": {
-        "type": "FromJSON",
+        "type": "ImagesFromJSON",
         "args": {
-            "images_labels_path": "data/split_data/train/images_labels.json"
+            "path_to_config": "data/split_data/train/images_labels.json"
         }
     },
     "dataloader": {

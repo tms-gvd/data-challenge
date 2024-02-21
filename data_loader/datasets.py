@@ -8,34 +8,30 @@ import json
 import cv2
 import torch
 
-class LandMarksDataset(Dataset):
-    def __init__(self, dir_path, points_type, transform) -> None:
+
+class ImagesFromJSON(Dataset):
+    def __init__(self, path_to_config, transform_x=None) -> None:
         super().__init__()
 
-        data_path = os.path.join(dir_path, "train_data")
-        with h5py.File(data_path, "r") as f:
-            self.landmarks = f["landmarks"][:]
-            self.labels = f["annotations"][:]
-        
-        if points_type == "contours":
-            self.fct_type = extract_contours_landmarks
-        else:
-            raise ValueError("Invalid points type")
+        with open(path_to_config, "r") as f:
+            self.paths = json.load(f)
 
-        self.transform = transform
+        # set up basic transform
+        if transform_x is None:
+            self.transform_x = transforms.Compose([transforms.ToTensor()])
+        else:
+            self.transform_x = transform_x
 
     def __len__(self):
-        return len(self.landmarks)
+        return len(self.paths)
 
     def __getitem__(self, index):
-        
-        x = extract_contours_landmarks(self.landmarks[index][-1])
-        y = self.labels[index]
-        
-        if self.transform:
-            return self.transform(x), y
-        else:
-            return x, y
+        image_path = self.paths[str(index)]["image_path"]
+        image = cv2.imread(image_path, cv2.IMREAD_COLOR) / 255.0
+
+        label = self.paths[str(index)]["labels"]
+
+        return self.transform_x(image), torch.Tensor(label).int()
 
 
 def extract_contours_landmarks(landmarks):
@@ -46,27 +42,21 @@ def extract_contours_landmarks(landmarks):
     ## extract landmarks
     contours_landmarks = landmarks[CONTOURS_INDICES]
     return contours_landmarks
-    
 
-class FromJSON(Dataset):
-    def __init__(self, images_labels_path, transform=transforms.ToTensor()) -> None:
-        super().__init__()
-        self.images_labels_path = images_labels_path
 
-        with open(images_labels_path, "r") as f:
-            self.images_labels = json.load(f)
-        
-        self.transform = transform
+def timesteps_to_classes(labels: np.array, max_length=37) -> np.array:
+    new_labels = np.zeros(max_length)
+    t1, t2, t3, t4 = labels
+    new_labels[:t1] = 0
+    new_labels[t1:t2] = 1
+    new_labels[t2:t3] = 2
+    new_labels[t3:t4] = 1
+    new_labels[t4:] = 0
+    return new_labels.astype(int)
 
-    def __len__(self):
-        return len(self.images_labels)
 
-    def __getitem__(self, index):
-        image_path = self.images_labels[str(index)]["image_path"]
-        label = torch.Tensor(self.images_labels[str(index)]["labels"])
-        image = cv2.imread(image_path, cv2.IMREAD_COLOR) / 255.
-        
-        if self.transform:
-            return self.transform(image), label
-        else:
-            return image, label
+def timesteps_to_one_hot(labels, max_length=37):
+    new_labels = np.zeros(max_length)
+    new_labels[labels - 1] = 1
+    # assert np.all(new_labels.sum(axis=1) == 4.)
+    return new_labels.astype(int)

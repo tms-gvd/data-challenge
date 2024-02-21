@@ -9,7 +9,7 @@ import wandb
 
 
 class ConfigParser:
-    def __init__(self, config, resume=None, with_wandb=False, preprocess=False, modification=None):
+    def __init__(self, config, resume=None, with_wandb=False, modification=None):
         """
         class to parse configuration json file. Handles hyperparameters for training, initializations of modules, checkpoint saving
         and logging module.
@@ -21,7 +21,6 @@ class ConfigParser:
         self._config = _update_config(config, modification)
         self.resume = resume
         self.with_wandb = with_wandb
-        self.preprocess = preprocess
         
         if self.with_wandb:
             print("Logging to wandb")
@@ -75,7 +74,7 @@ class ConfigParser:
         modification = {
             opt.target: getattr(args, _get_opt_name(opt.flags)) for opt in options
         }
-        return cls(config, resume, args.with_wandb, args.preprocess, modification)
+        return cls(config, resume, args.with_wandb, modification)
 
     def init_obj(self, name, module, *args, **kwargs):
         """

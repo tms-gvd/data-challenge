@@ -9,8 +9,8 @@ import model.metric as module_metric
 import model.model as module_arch
 from parse_config import ConfigParser
 from trainer import Trainer
-from data_loader.preprocessing import Preprocessor, resize_image, gray_to_rgb
-from data_loader.preprocessing import timesteps_to_classes, timesteps_to_one_hot
+from preprocessing import Preprocessor, resize_image, gray_to_rgb
+from preprocessing import timesteps_to_classes, timesteps_to_one_hot
 
 # fix random seeds for reproducibility
 SEED = 123
@@ -20,35 +20,6 @@ torch.backends.cudnn.benchmark = False
 np.random.seed(SEED)
 
 def main(config):
-    # 1. Preprocess data
-    if config.preprocess:
-        preprocess_data = Preprocessor(config['preprocessing']['dir_path'])
-        print("Transform x:", config['preprocessing']['transform_x'])
-        print("Transform y:", config['preprocessing']['transform_y'])
-        
-        if config['preprocessing']['transform_x'] is False:
-            transform_x = False
-        elif config['preprocessing']['transform_x'] == "resize_rgb":
-            transform_x = lambda image: gray_to_rgb(resize_image(image))
-        else:
-            raise ValueError("Invalid transform_x")
-        
-        if not config['preprocessing']['transform_y']:
-            transform_y = False
-        elif config['preprocessing']['transform_y'] == "timesteps_to_classes":
-            transform_y = timesteps_to_classes
-        elif config['preprocessing']['transform_y'] == "timesteps_to_one_hot":
-            transform_y = timesteps_to_one_hot
-        else:
-            raise ValueError("Invalid transform_y")
-        
-        train_path, test_path = preprocess_data.sequences_to_images(
-            transform_x=transform_x, transform_y=transform_y
-        )
-        print()
-        
-        if config['dataset']['type'] == "FromJSON":
-            config['dataset']['args']['images_labels_path'] = train_path
 
     # 2. Create dataset
     print("Dataset:", config['dataset']['type'])
@@ -122,15 +93,14 @@ if __name__ == '__main__':
     #                   help='indices of GPUs to enable (default: all)')
     args.add_argument('--with_wandb', default=False, action='store_true',
                       help='Use wandb for logging')
-    args.add_argument('--preprocess', default=False, action='store_true',
-                      help='Preprocess data')
 
     # custom cli options to modify configuration from default values given in json file.
     CustomArgs = collections.namedtuple('CustomArgs', 'flags type target')
     options = [
+        CustomArgs(['--path_data'], type=str, target='dataset;args;path_to_config'),
         CustomArgs(['--lr', '--learning_rate'], type=float, target='optimizer;args;lr'),
         CustomArgs(['--bs', '--batch_size'], type=int, target='data_loader;args;batch_size'),
-        CustomArgs(['--device'], type=str, target='device')
+        CustomArgs(['--device'], type=str, target='device'),
     ]
     config = ConfigParser.from_args(args, options)
     main(config)
