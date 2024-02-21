@@ -31,7 +31,7 @@ class ImagesFromJSON(Dataset):
 
         label = self.paths[str(index)]["labels"]
 
-        return self.transform_x(image), torch.Tensor(label).int()
+        return self.transform_x(image), torch.Tensor(label).long()
 
 
 def extract_contours_landmarks(landmarks):
