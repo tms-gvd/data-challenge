@@ -42,13 +42,13 @@ def main(config):
         else:
             raise ValueError("Invalid transform_y")
         
-        images_labels_path = preprocess_data.sequences_to_images(
+        train_path, test_path = preprocess_data.sequences_to_images(
             transform_x=transform_x, transform_y=transform_y
         )
         print()
         
         if config['dataset']['type'] == "FromJSON":
-            config['dataset']['args']['images_labels_path'] = images_labels_path
+            config['dataset']['args']['images_labels_path'] = train_path
 
     # 2. Create dataset
     print("Dataset:", config['dataset']['type'])

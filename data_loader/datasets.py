@@ -67,6 +67,6 @@ class FromJSON(Dataset):
         image = cv2.imread(image_path, cv2.IMREAD_COLOR) / 255.
         
         if self.transform:
-            return self.transform(image).double(), label
+            return self.transform(image), label
         else:
             return image, label

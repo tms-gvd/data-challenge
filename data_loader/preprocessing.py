@@ -49,8 +49,8 @@ class Preprocessor:
                 }
                 count += 1
 
-        images_labels_path = os.path.join(train_dir, "images_labels.json")
-        with open(images_labels_path, "w") as f:
+        train_path = os.path.join(train_dir, "images_labels.json")
+        with open(train_path, "w") as f:
             json.dump(images_labels, f, indent=4)
 
         print("Preprocessing test data...")
@@ -78,11 +78,11 @@ class Preprocessor:
                 }
                 count += 1
 
-        images_labels_path = os.path.join(test_dir, "images_labels.json")
-        with open(images_labels_path, "w") as f:
+        test_path = os.path.join(test_dir, "images_labels.json")
+        with open(test_path, "w") as f:
             json.dump(images_labels, f, indent=4)
 
-        return images_labels_path
+        return train_path, test_path
 
 
 ### TRANSFORMS ON IMAGES ###
