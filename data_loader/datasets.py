@@ -33,6 +33,44 @@ class ImagesFromJSON(Dataset):
 
         return self.transform_x(image), torch.Tensor(label).long()
 
+def timesteps_to_classes(labels: np.array, max_length=37) -> np.array:
+    new_labels = np.zeros(max_length)
+    t1, t2, t3, t4 = labels
+    new_labels[:t1] = 0
+    new_labels[t1:t2] = 1
+    new_labels[t2:t3] = 2
+    new_labels[t3:t4] = 1
+    new_labels[t4:] = 0
+    return new_labels.astype(int)
+
+class ImagesClassif(Dataset):
+    def __init__(self, dir_path) -> None:
+        super().__init__()
+
+        self.dir_path = dir_path
+        with h5py.File(os.path.join(dir_path, "train_data"), "r") as f:
+            train_sequences = f["images"][:]
+            _, _, h, w = train_sequences.shape
+            self.train_sequences = train_sequences.reshape(-1, h, w)
+            train_labels = f["annotations"][:]
+        
+        self.train_labels = torch.from_numpy(np.array([timesteps_to_classes(label) for label in train_labels]).flatten())
+        
+        self.transform = transforms.Compose(
+            [
+                transforms.ToPILImage(),
+                transforms.Resize((288, 224)),
+                transforms.Grayscale(num_output_channels=3),  # Convert grayscale to RGB
+                transforms.ToTensor(),
+            ]
+        )
+    
+    def __len__(self):
+        return len(self.train_sequences)
+    
+    def __getitem__(self, index):
+        return self.transform(self.train_sequences[index]), self.train_labels[index]
+
 
 def extract_contours_landmarks(landmarks):
     """Returns the CONTOURS LANDMARKS"""

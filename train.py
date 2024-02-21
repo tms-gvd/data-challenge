@@ -9,8 +9,6 @@ import model.metric as module_metric
 import model.model as module_arch
 from parse_config import ConfigParser
 from trainer import Trainer
-from preprocessing import Preprocessor, resize_image, gray_to_rgb
-from preprocessing import timesteps_to_classes, timesteps_to_one_hot
 
 # fix random seeds for reproducibility
 SEED = 123
