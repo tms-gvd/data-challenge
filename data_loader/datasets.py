@@ -6,6 +6,7 @@ import mediapipe as mp
 import numpy as np
 import json
 import cv2
+import torch
 
 class LandMarksDataset(Dataset):
     def __init__(self, dir_path, points_type, transform) -> None:
@@ -62,10 +63,10 @@ class FromJSON(Dataset):
 
     def __getitem__(self, index):
         image_path = self.images_labels[str(index)]["image_path"]
-        label = self.images_labels[str(index)]["labels"]
+        label = torch.Tensor(self.images_labels[str(index)]["labels"])
         image = cv2.imread(image_path, cv2.IMREAD_COLOR) / 255.
         
         if self.transform:
-            return self.transform(image), label
+            return self.transform(image).double(), label
         else:
             return image, label

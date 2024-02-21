@@ -25,7 +25,7 @@ class MnistModel(BaseModel):
 class CustomResNet50(nn.Module):
     def __init__(self, num_classes):
         super(CustomResNet50, self).__init__()
-        self.resnet50 = resnet50(weights=ResNet50_Weights.DEFAULT)
+        self.resnet50 = resnet50(weights=ResNet50_Weights.DEFAULT).float()
         num_ftrs = self.resnet50.fc.in_features
         self.resnet50.fc = nn.Linear(num_ftrs, num_classes)
 
