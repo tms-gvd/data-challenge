@@ -75,7 +75,6 @@ class Trainer(BaseTrainer):
             # back-prop step
             self.optimizer.zero_grad()
             output = self.model(data)
-            print(output.shape, target.shape)
             loss = self.criterion(output, target)
             loss.backward()
             self.optimizer.step()
