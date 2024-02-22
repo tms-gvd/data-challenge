@@ -85,6 +85,7 @@ class Trainer(BaseTrainer):
             # log losses and metrics
             batch_metrics = {"train/loss": loss.item()}
             for name, metric in self.metrics.items():
+                output, target = output.cpu(), target.cpu()
                 if name == "PrecisionPerClass":
                     mat = metric(output, target)
                     for i, (tp, fp) in enumerate(mat):
@@ -156,6 +157,7 @@ class Trainer(BaseTrainer):
                 running_count += data.size(0)
                 
                 for name, metric in self.metrics.items():
+                    output, target = output.cpu(), target.cpu()
                     if name == "PrecisionPerClass":
                         mat = metric(output, target)
                         for i, (tp, fp) in enumerate(mat):
