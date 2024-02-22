@@ -112,7 +112,7 @@ if __name__ == '__main__':
     options = [
         CustomArgs(['--path_data'], type=str, target='dataset;args;path_to_config'),
         CustomArgs(['--lr', '--learning_rate'], type=float, target='optimizer;args;lr'),
-        CustomArgs(['--bs', '--batch_size'], type=int, target='data_loader;args;batch_size'),
+        CustomArgs(['--bs', '--batch_size'], type=int, target='dataloader;args;batch_size'),
         CustomArgs(['--device'], type=str, target='device'),
     ]
     config = ConfigParser.from_args(args, options)
