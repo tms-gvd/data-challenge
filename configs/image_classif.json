@@ -31,7 +31,7 @@
             "amsgrad": true
         }
     },
-    "loss": "nll_loss",
+    "loss": "nll_loss_weighted",
     "metrics": [
         "Accuracy",
         "PrecisionPerClass"

@@ -2,7 +2,6 @@ import os
 import h5py
 from torch.utils.data import Dataset
 from torchvision import transforms
-import mediapipe as mp
 import numpy as np
 import json
 import cv2
@@ -41,7 +40,7 @@ class ImagesFromTXT(Dataset):
     def __getitem__(self, index):
         image = cv2.imread(self.paths[index], cv2.IMREAD_COLOR) / 255.0
 
-        return (self.seq_ids[index], self.img_ids[index]), self.transform_x(image), self.labels[index]
+        return self.transform_x(image), self.labels[index]
 
 
 class ImagesClassif(Dataset):
@@ -72,15 +71,6 @@ class ImagesClassif(Dataset):
     def __getitem__(self, index):
         return self.transform(self.train_sequences[index]), self.train_labels[index]
 
-
-def extract_contours_landmarks(landmarks):
-    """Returns the CONTOURS LANDMARKS"""
-    ## get contours landmarks indices
-    CONTOURS_INDICES = list(mp.solutions.face_mesh.FACEMESH_CONTOURS)
-    CONTOURS_INDICES = np.unique(CONTOURS_INDICES)
-    ## extract landmarks
-    contours_landmarks = landmarks[CONTOURS_INDICES]
-    return contours_landmarks
 
 
 def timesteps_to_classes(labels: np.array, max_length=37) -> np.array:

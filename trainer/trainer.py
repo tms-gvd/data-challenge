@@ -64,7 +64,7 @@ class Trainer(BaseTrainer):
         running_loss = 0.0
         running_count = 0
 
-        for _, data, target in tqdm(
+        for data, target in tqdm(
             self.data_loader,
             desc=f"TRAIN {epoch}/{self.epochs}",
             ncols=100,
@@ -141,7 +141,7 @@ class Trainer(BaseTrainer):
             
 
         with torch.no_grad():
-            for _, data, target in tqdm(
+            for data, target in tqdm(
                 self.valid_data_loader,
                 desc=f"VAL {epoch}/{self.epochs}",
                 ncols=100,
@@ -177,6 +177,9 @@ class Trainer(BaseTrainer):
                     running_metrics[f'val/precision_{i}'] = tp / (tp + fp) if tp + fp > 0 else 0
                     running_metrics.pop(f'val/precision_{i}_tp')
                     running_metrics.pop(f'val/precision_{i}_fp')
+            elif "IoU" in self.metrics or "Accuracy" in self.metrics:
+                running_metrics[f'val/IoU'] /= len(self.valid_data_loader)
+                running_metrics[f'val/Accuracy'] /= len(self.valid_data_loader)
             wandb.log(running_metrics, step=self.step)
 
             if not self.config.with_wandb:
