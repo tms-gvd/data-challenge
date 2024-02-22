@@ -1,22 +1,17 @@
 {
-    "name": "debug",
-    "device": "cpu",
+    "name": "debug_mnist",
+    "device": "cuda",
 
     "arch": {
-        "type": "CustomResNet18",
+        "type": "MnistModel",
         "args": {
-            "num_classes": 3
-        }
-    },
-    "dataset": {
-        "type": "ImagesFromTXT",
-        "args": {
-            "path_to_config": "data/images/train/images_labels.txt"
+            "nb_classes": 10
         }
     },
     "dataloader": {
-        "type": "DataloaderFromDataset",
+        "type": "MnistDataLoader",
         "args":{
+            "data_dir": "data/",
             "batch_size": 16,
             "shuffle": true,
             "validation_split": 0.2,
@@ -31,14 +26,15 @@
             "amsgrad": true
         }
     },
-    "loss": "mse_loss",
+    "loss": "nll_loss",
     "metrics": [
-        "IoU"
+        "Accuracy",
+        "PrecisionPerClass"
     ],
     "lr_scheduler": {
         "type": "StepLR",
         "args": {
-            "step_size": 50,
+            "step_size": 10,
             "gamma": 0.1
         }
     },

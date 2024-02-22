@@ -1,6 +1,7 @@
 from typing import List, Tuple
 import numpy as np
 import torch
+import os
 
 class Accuracy(object):
     
@@ -21,6 +22,29 @@ class Accuracy(object):
     def __call__(self, prediction, target):
         return self._accuracy(prediction, target)
 
+
+class PrecisionPerClass(object):
+    
+
+    def __str__(self) -> str:
+        return 'PrecisionPerClass'
+    
+    def __repr__(self):
+        return 'Precision per class scoring metric'
+    
+    def _precision_per_class(self, output, target):
+        NB_CLASSES = os.environ.get('NB_CLASSES', 37)
+        with torch.no_grad():
+            pred = torch.argmax(output, dim=1)
+            assert pred.shape[0] == len(target)
+            preds = []
+            for i in range(int(NB_CLASSES)):
+                preds.append([(pred == i).logical_and(target == i).sum(),
+                              (pred == i).sum()])
+        return np.array(preds)
+
+    def __call__(self, prediction, target):
+        return self._precision_per_class(prediction, target)
 
 class IoU(object):
     

@@ -64,7 +64,7 @@ class Trainer(BaseTrainer):
         running_loss = 0.0
         running_count = 0
 
-        for data, target in tqdm(
+        for _, data, target in tqdm(
             self.data_loader,
             desc=f"TRAIN {epoch}/{self.epochs}",
             ncols=100,
@@ -85,7 +85,14 @@ class Trainer(BaseTrainer):
             # log losses and metrics
             batch_metrics = {"train/loss": loss.item()}
             for name, metric in self.metrics.items():
-                batch_metrics[f"train/{name}"] = metric(output, target)
+                if name == "PrecisionPerClass":
+                    mat = metric(output, target)
+                    for i, (tp, fp) in enumerate(mat):
+                        batch_metrics[f"train/precision_{i}"] = tp / (tp + fp) if tp + fp > 0 else 0
+                elif name in ["IoU", "Accuracy"]:
+                    batch_metrics[f"train/{name}"] = metric(output, target)
+                else:
+                    raise NotImplementedError
             wandb.log(batch_metrics, step=self.step)
             
             self.step += 1
@@ -106,7 +113,7 @@ class Trainer(BaseTrainer):
         if self.lr_scheduler is not None:
             self.lr_scheduler.step()
         
-        wandb.log({"train/lr": self.lr_scheduler.get_lr()}, step=self.step)
+        wandb.log({"train/lr": self.lr_scheduler.get_last_lr()}, step=self.step)
         
         return train_loss, val_loss
 
@@ -122,10 +129,18 @@ class Trainer(BaseTrainer):
         running_loss = 0.0
         running_count = 0
         
-        running_metrics = {f'val/{name}': 0 for name in self.metrics}
+        running_metrics = {}
+        for name in self.metrics:
+            if name == "PrecisionPerClass":
+                for i in range(self.config.config["nb_classes"]):
+                    running_metrics[f'val/precision_{i}_fp'] = 0
+                    running_metrics[f'val/precision_{i}_tp'] = 0
+            else:
+                running_metrics[f'val/{name}'] = 0
+            
 
         with torch.no_grad():
-            for data, target in tqdm(
+            for _, data, target in tqdm(
                 self.valid_data_loader,
                 desc=f"VAL {epoch}/{self.epochs}",
                 ncols=100,
@@ -141,12 +156,25 @@ class Trainer(BaseTrainer):
                 running_count += data.size(0)
                 
                 for name, metric in self.metrics.items():
-                    running_metrics[f'val/{name}'] += metric(output, target)
-
+                    if name == "PrecisionPerClass":
+                        mat = metric(output, target)
+                        for i, (tp, fp) in enumerate(mat):
+                            running_metrics[f'val/precision_{i}_tp'] += tp
+                            running_metrics[f'val/precision_{i}_fp'] += fp
+                    elif name in ["IoU", "Accuracy"]:
+                        running_metrics[f'val/{name}'] += metric(output, target)
+                    else:
+                        raise NotImplementedError
             epoch_loss = running_loss / running_count
             
             # log losses and metrics
             running_metrics["val/loss"] = epoch_loss
+            if "PrecisionPerClass" in self.metrics:
+                for i in range(self.config.config["nb_classes"]):
+                    tp, fp = running_metrics[f'val/precision_{i}_tp'], running_metrics[f'val/precision_{i}_fp']
+                    running_metrics[f'val/precision_{i}'] = tp / (tp + fp) if tp + fp > 0 else 0
+                    running_metrics.pop(f'val/precision_{i}_tp')
+                    running_metrics.pop(f'val/precision_{i}_fp')
             wandb.log(running_metrics, step=self.step)
 
             if not self.config.with_wandb:

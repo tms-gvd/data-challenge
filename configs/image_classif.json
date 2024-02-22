@@ -1,11 +1,11 @@
 {
-    "name": "debug",
-    "device": "cpu",
+    "name": "image_classif",
+    "device": "cuda",
 
     "arch": {
         "type": "CustomResNet18",
         "args": {
-            "num_classes": 3
+            "nb_classes": 3
         }
     },
     "dataset": {
@@ -17,28 +17,29 @@
     "dataloader": {
         "type": "DataloaderFromDataset",
         "args":{
-            "batch_size": 16,
+            "batch_size": 4,
             "shuffle": true,
             "validation_split": 0.2,
-            "num_workers": 2
+            "num_workers": 6
         }
     },
     "optimizer": {
         "type": "Adam",
         "args":{
             "lr": 0.001,
-            "weight_decay": 0,
+            "weight_decay": 0.0001,
             "amsgrad": true
         }
     },
-    "loss": "mse_loss",
+    "loss": "nll_loss",
     "metrics": [
-        "IoU"
+        "Accuracy",
+        "PrecisionPerClass"
     ],
     "lr_scheduler": {
         "type": "StepLR",
         "args": {
-            "step_size": 50,
+            "step_size": 5,
             "gamma": 0.1
         }
     },
