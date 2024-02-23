@@ -61,7 +61,7 @@ def main(config):
     print(f"Using device: {device}")
     
     # model to device
-    model = model.to(device, dtype=torch.float64)
+    model = model.to(device, dtype=torch.float32)
     if len(device_ids) > 1:
         model = torch.nn.DataParallel(model, device_ids=device_ids)
     

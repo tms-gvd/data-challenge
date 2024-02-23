@@ -50,10 +50,10 @@ class SeqFromH5(Dataset):
         with open(path_to_config, "r") as f:
             self.paths = [line.strip() for line in f.readlines()]
         
-        if transform_x is None:
-            self.transform_x = lambda x: torch.from_numpy(x) / 255.0
-        else:
-            self.transform_x = transform_x
+        # if transform_x is None:
+        #     self.transform_x = lambda x: torch.from_numpy(x) / 255.0
+        # else:
+        #     self.transform_x = transform_x
         
     def __len__(self):
         return len(self.paths)
@@ -63,7 +63,9 @@ class SeqFromH5(Dataset):
             image = f["sequence"][:]
             label = f["label"][:]
         
-        return self.transform_x(image), label.astype(np.float64)
+        image = torch.from_numpy(image) / 255.0
+        
+        return image, label.astype(np.float32)
 
 
 class ImagesClassif(Dataset):

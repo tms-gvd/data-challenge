@@ -1,6 +1,6 @@
 {
     "name": "vivit",
-    "device": "cuda",
+    "device": "mps",
 
     "arch": {
         "type": "ViViT",
@@ -14,13 +14,13 @@
     "dataset": {
         "type": "SeqFromH5",
         "args": {
-            "path_to_config": "data/sequences/train/seq_labels.txt"
+            "path_to_config": "data/sequences/train/paths.txt"
         }
     },
     "dataloader": {
         "type": "DataloaderFromDataset",
         "args":{
-            "batch_size": 4,
+            "batch_size": 1,
             "shuffle": true,
             "validation_split": 0.2,
             "num_workers": 5
@@ -34,7 +34,10 @@
             "amsgrad": true
         }
     },
-    "loss": "bce+iou",
+    "loss": {
+        "type": "BCEWithLogitsLoss",
+        "args": {}
+    },
     "metrics": [
         "IoU"
     ],

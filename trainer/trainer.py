@@ -70,7 +70,7 @@ class Trainer(BaseTrainer):
             ncols=100,
         ):
             # move data to device
-            data, target = data.to(self.device, dtype=torch.float64), target.to(self.device)
+            data, target = data.to(self.device, dtype=torch.float32), target.to(self.device)
 
             # back-prop step
             self.optimizer.zero_grad()
@@ -164,7 +164,7 @@ class Trainer(BaseTrainer):
                 ncols=100,
             ):
                 # move data to device
-                data, target = data.to(self.device, dtype=torch.float64), target.to(self.device)
+                data, target = data.to(self.device, dtype=torch.float32), target.to(self.device)
 
                 # predictions and loss
                 output = self.model(data)
