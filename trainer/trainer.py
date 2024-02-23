@@ -77,8 +77,10 @@ class Trainer(BaseTrainer):
             output = self.model(data)
             if isinstance(self.criterion, tuple):
                 bce, iou = self.criterion
-                y_preds = torch.sort(torch.topk(output.clone(), 4).indices, dim=1).values
-                y_true = torch.sort(torch.topk(target.clone(), 4).indices, dim=1).values
+                y_preds = torch.sort(torch.topk(output, 4).indices, dim=1).values
+                y_true = torch.sort(torch.topk(target, 4).indices, dim=1).values
+                # print(y_preds.cpu().numpy())
+                # print(y_true.cpu().numpy())
                 loss1 = bce(output, target)
                 loss2 = iou(y_preds, y_true)
                 loss = loss1 - 10 * loss2
@@ -92,7 +94,11 @@ class Trainer(BaseTrainer):
 
             # log losses and metrics
             if isinstance(self.criterion, tuple):
-                batch_metrics = {"train/loss": loss.item(), "train/loss_bce": loss1.item(), "train/loss_iou": loss2.item()}
+                try:
+                    batch_metrics = {"train/loss": loss.item(), "train/loss_bce": loss1.item(), "train/loss_iou": loss2.item()}
+                except:
+                    batch_metrics = {"train/loss": 0, "train/loss_bce": 0, "train/loss_iou": 0}
+                    print(target.item(), output.item())
             else:
                 batch_metrics = {"train/loss": loss.item()}
             for name, metric in self.metrics.items():
