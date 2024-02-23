@@ -1,17 +1,20 @@
 {
-    "name": "image_classif",
+    "name": "vivit",
     "device": "cuda",
 
     "arch": {
-        "type": "CustomResNet18",
+        "type": "ViViT",
         "args": {
-            "num_classes": 3
+            "image_size": 224,
+            "patch_size": 16,
+            "num_classes": 37,
+            "num_frames": 37
         }
     },
     "dataset": {
-        "type": "ImagesFromTXT",
+        "type": "SeqFromH5",
         "args": {
-            "path_to_config": "data/images/train/images_labels.txt"
+            "path_to_config": "data/sequences/train/seq_labels.txt"
         }
     },
     "dataloader": {
@@ -20,7 +23,7 @@
             "batch_size": 4,
             "shuffle": true,
             "validation_split": 0.2,
-            "num_workers": 6
+            "num_workers": 5
         }
     },
     "optimizer": {
@@ -31,10 +34,9 @@
             "amsgrad": true
         }
     },
-    "loss": "nll_loss_weighted",
+    "loss": "bce+iou",
     "metrics": [
-        "Accuracy",
-        "PrecisionPerClass"
+        "IoU"
     ],
     "lr_scheduler": {
         "type": "StepLR",

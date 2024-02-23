@@ -27,7 +27,7 @@ class BaseTrainer:
         else:
             self.mnt_mode, self.mnt_metric = self.monitor.split()
             assert self.mnt_mode in ['min', 'max']
-            if not self.mnt_metric in ['train_loss', 'val_loss']:
+            if not self.mnt_metric in ['train_loss', 'val_loss', 'val_iou']:
                 raise ValueError("Unsupported metric: {} for monitoring".format(self.mnt_metric))
             else:
                 print("Monitoring metric: {}".format(self.monitor))
@@ -59,16 +59,16 @@ class BaseTrainer:
         """
         not_improved_count = 0
         for epoch in range(self.start_epoch, self.epochs + 1):
-            train_loss, val_loss = self._train_epoch(epoch)
+            train_loss, val_metric = self._train_epoch(epoch)
 
             # evaluate model performance according to configured metric, save best checkpoint as model_best
             if self.mnt_mode != 'off':
-                to_compare = val_loss if self.mnt_metric == 'val_loss' else train_loss
+                to_compare = val_metric if "val" in self.mnt_metric else train_loss
                 
-                if to_compare < self.mnt_best:
-                    self.mnt_best = val_loss
+                if (to_compare < self.mnt_best and self.mnt_mode == "min") or (to_compare > self.mnt_best and self.mnt_mode == "max"):
+                    print(f"New best found! MODE: {self.mnt_mode} | PREVIOUS BEST: {self.mnt_best:.3f} | NEW BEST: {to_compare}")
+                    self.mnt_best = val_metric
                     not_improved_count = 0
-                    print("New best model found")
                     self._save_checkpoint(epoch, save_best=True)
                 else:
                     not_improved_count += 1

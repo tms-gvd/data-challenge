@@ -70,12 +70,20 @@ class Trainer(BaseTrainer):
             ncols=100,
         ):
             # move data to device
-            data, target = data.to(self.device, dtype=torch.float64), target.to(self.device, dtype=torch.long)
+            data, target = data.to(self.device, dtype=torch.float64), target.to(self.device)
 
             # back-prop step
             self.optimizer.zero_grad()
             output = self.model(data)
-            loss = self.criterion(output, target)
+            if isinstance(self.criterion, tuple):
+                bce, iou = self.criterion
+                y_preds = torch.sort(torch.topk(output.clone(), 4).indices, dim=1).values
+                y_true = torch.sort(torch.topk(target.clone(), 4).indices, dim=1).values
+                loss1 = bce(output, target)
+                loss2 = iou(y_preds, y_true)
+                loss = loss1 +  -.1 * loss2
+            else:
+                loss = self.criterion(output, target)
             loss.backward()
             self.optimizer.step()
 
@@ -83,7 +91,10 @@ class Trainer(BaseTrainer):
             running_count += data.size(0)
 
             # log losses and metrics
-            batch_metrics = {"train/loss": loss.item()}
+            if isinstance(self.criterion, tuple):
+                batch_metrics = {"train/loss": loss.item(), "train/loss_bce": loss1.item(), "train/loss_iou": loss2.item()}
+            else:
+                batch_metrics = {"train/loss": loss.item()}
             for name, metric in self.metrics.items():
                 output, target = output.cpu(), target.cpu()
                 if name == "PrecisionPerClass":
@@ -108,15 +119,15 @@ class Trainer(BaseTrainer):
         
         # validation
         if self.do_validation:
-            val_loss = self._valid_epoch(epoch)
+            val_metric = self._valid_epoch(epoch)
 
         # learning rate scheduler step
         if self.lr_scheduler is not None:
             self.lr_scheduler.step()
         
-        wandb.log({"train/lr": self.lr_scheduler.get_last_lr()}, step=self.step)
+        wandb.log({"train/lr": self.lr_scheduler.get_last_lr()[0]}, step=self.step)
         
-        return train_loss, val_loss
+        return train_loss, val_metric
 
     def _valid_epoch(self, epoch):
         """
@@ -133,7 +144,7 @@ class Trainer(BaseTrainer):
         running_metrics = {}
         for name in self.metrics:
             if name == "PrecisionPerClass":
-                for i in range(self.config.config["nb_classes"]):
+                for i in range(self.config.config["num_classes"]):
                     running_metrics[f'val/precision_{i}_fp'] = 0
                     running_metrics[f'val/precision_{i}_tp'] = 0
             else:
@@ -147,11 +158,19 @@ class Trainer(BaseTrainer):
                 ncols=100,
             ):
                 # move data to device
-                data, target = data.to(self.device, dtype=torch.float64), target.to(self.device, dtype=torch.long)
+                data, target = data.to(self.device, dtype=torch.float64), target.to(self.device)
 
                 # predictions and loss
                 output = self.model(data)
-                loss = self.criterion(output, target)
+                if isinstance(self.criterion, tuple):
+                    bce, iou = self.criterion
+                    y_preds = torch.sort(torch.topk(output.clone(), 4).indices, dim=1).values
+                    y_true = torch.sort(torch.topk(target.clone(), 4).indices, dim=1).values
+                    loss1 = bce(output, target)
+                    loss2 = iou(y_preds, y_true)
+                    loss = loss1 + -.1 * loss2
+                else:
+                    loss = self.criterion(output, target)
 
                 running_loss += loss.item()
                 running_count += data.size(0)
@@ -171,18 +190,21 @@ class Trainer(BaseTrainer):
             
             # log losses and metrics
             running_metrics["val/loss"] = epoch_loss
-            if "PrecisionPerClass" in self.metrics:
-                for i in range(self.config.config["nb_classes"]):
-                    tp, fp = running_metrics[f'val/precision_{i}_tp'], running_metrics[f'val/precision_{i}_fp']
-                    running_metrics[f'val/precision_{i}'] = tp / (tp + fp) if tp + fp > 0 else 0
-                    running_metrics.pop(f'val/precision_{i}_tp')
-                    running_metrics.pop(f'val/precision_{i}_fp')
-            elif "IoU" in self.metrics or "Accuracy" in self.metrics:
-                running_metrics[f'val/IoU'] /= len(self.valid_data_loader)
-                running_metrics[f'val/Accuracy'] /= len(self.valid_data_loader)
+            for name in self.metrics:
+                if name == "PrecisionPerClass":
+                    for i in range(self.config.config["num_classes"]):
+                        tp, fp = running_metrics[f'val/precision_{i}_tp'], running_metrics[f'val/precision_{i}_fp']
+                        running_metrics[f'val/precision_{i}'] = tp / (tp + fp) if tp + fp > 0 else 0
+                        running_metrics.pop(f'val/precision_{i}_tp')
+                        running_metrics.pop(f'val/precision_{i}_fp')
+                else:
+                    running_metrics[f'val/{name}'] /= len(self.valid_data_loader)
             wandb.log(running_metrics, step=self.step)
 
             if not self.config.with_wandb:
                 print(f"VAL loss: {epoch_loss}")
 
-        return epoch_loss
+        if self.mnt_metric == 'val_loss':
+            return epoch_loss
+        elif self.mnt_metric == 'val_iou':
+            return running_metrics['val/IoU']

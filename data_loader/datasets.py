@@ -40,7 +40,30 @@ class ImagesFromTXT(Dataset):
     def __getitem__(self, index):
         image = cv2.imread(self.paths[index], cv2.IMREAD_COLOR) / 255.0
 
-        return self.transform_x(image), self.labels[index]
+        return self.transform_x(image), self.labels[index].astype(torch.int64)
+
+
+class SeqFromH5(Dataset):
+    def __init__(self, path_to_config, transform_x=None) -> None:
+        super().__init__()
+        
+        with open(path_to_config, "r") as f:
+            self.paths = [line.strip() for line in f.readlines()]
+        
+        if transform_x is None:
+            self.transform_x = lambda x: torch.from_numpy(x) / 255.0
+        else:
+            self.transform_x = transform_x
+        
+    def __len__(self):
+        return len(self.paths)
+    
+    def __getitem__(self, index):
+        with h5py.File(self.paths[index], "r") as f:
+            image = f["sequence"][:]
+            label = f["label"][:]
+        
+        return self.transform_x(image), label.astype(np.float64)
 
 
 class ImagesClassif(Dataset):
@@ -69,7 +92,7 @@ class ImagesClassif(Dataset):
         return len(self.train_sequences)
     
     def __getitem__(self, index):
-        return self.transform(self.train_sequences[index]), self.train_labels[index]
+        return self.transform(self.train_sequences[index]), self.train_labels[index].astype(torch.int64)
 
 
 

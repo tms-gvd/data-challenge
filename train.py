@@ -44,8 +44,8 @@ def main(config):
     # CREATE MODEL
     print("Model:", config['arch']['type'])
     model = config.init_obj('arch', module_arch)
-    config.config['nb_classes'] = config.config['arch']['args']['nb_classes']
-    os.environ['NB_CLASSES'] = str(config.config['nb_classes'])
+    config.config['num_classes'] = config.config['arch']['args']['num_classes']
+    os.environ['NUM_CLASSES'] = str(config.config['num_classes'])
 
     # prepare for (multi-device) GPU training
     # device, device_ids = prepare_device(config['n_gpu'])
@@ -68,10 +68,22 @@ def main(config):
     print()
     
     # CREATE OPTIMIZER, LOSS, METRICS
-    print("Loss:", config['loss'])
-    criterion = getattr(module_loss, config['loss'])
+    if isinstance(config['loss'], dict):
+        criterion = config.init_obj('loss', torch.nn)
+        print("Loss:", config['loss']["type"])
+    
+    elif isinstance(config['loss'], str):
+        if config['loss'] == "bce+iou":
+            criterion = (torch.nn.BCELoss(), module_metric.IoU())
+        else:
+            criterion = getattr(module_loss, config['loss'])
+        print("Loss:", config['loss'])
+    
+    else:
+        raise ValueError("Loss must be a string or a dictionary")
 
     metrics = [getattr(module_metric, met) for met in config['metrics']]
+    print("Metrics:")
     for metric in metrics:
         print(f"\t - {metric.__name__}")
 

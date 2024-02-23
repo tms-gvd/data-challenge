@@ -14,13 +14,13 @@ from model.module import Attention, PreNorm, FeedForward
 
 
 class MnistModel(BaseModel):
-    def __init__(self, nb_classes=10):
+    def __init__(self, num_classes=10):
         super().__init__()
         self.conv1 = nn.Conv2d(1, 10, kernel_size=5)
         self.conv2 = nn.Conv2d(10, 20, kernel_size=5)
         self.conv2_drop = nn.Dropout2d()
         self.fc1 = nn.Linear(320, 50)
-        self.fc2 = nn.Linear(50, nb_classes)
+        self.fc2 = nn.Linear(50, num_classes)
 
     def forward(self, x):
         x = F.relu(F.max_pool2d(self.conv1(x), 2))
@@ -33,12 +33,12 @@ class MnistModel(BaseModel):
 
 
 class CustomResNet18(ResNet):
-    def __init__(self, nb_classes):
+    def __init__(self, num_classes):
         super(CustomResNet18, self).__init__(BasicBlock, [2, 2, 2, 2], 1000)
         weights = ResNet18_Weights.DEFAULT
         self.load_state_dict(weights.get_state_dict(progress=True, check_hash=True))
         num_ftrs = self.fc.in_features
-        self.fc = nn.Linear(num_ftrs, nb_classes)
+        self.fc = nn.Linear(num_ftrs, num_classes)
 
     def forward(self, x, debug=False):
 
@@ -90,12 +90,12 @@ class CustomResNet18(ResNet):
 
 
 class CustomResNet50(ResNet):
-    def __init__(self, nb_classes):
+    def __init__(self, num_classes):
         super(CustomResNet50, self).__init__(Bottleneck, [3, 4, 6, 3], 1000)
         weights = ResNet50_Weights.DEFAULT
         self.load_state_dict(weights.get_state_dict(progress=True, check_hash=True))
         num_ftrs = self.fc.in_features
-        self.fc = nn.Linear(num_ftrs, nb_classes)
+        self.fc = nn.Linear(num_ftrs, num_classes)
 
     def forward(self, x, debug=False):
 
@@ -227,7 +227,7 @@ class ViViT(nn.Module):
         self.dropout = nn.Dropout(emb_dropout)
         self.pool = pool
 
-        self.mlp_head = nn.Sequential(nn.LayerNorm(dim), nn.Linear(dim, num_classes))
+        self.mlp_head = nn.Sequential(nn.LayerNorm(dim), nn.Linear(dim, num_classes), nn.Sigmoid())
 
     def forward(self, x):
         x = self.to_patch_embedding(x)
