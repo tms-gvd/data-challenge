@@ -98,7 +98,7 @@ class Trainer(BaseTrainer):
                     batch_metrics = {"train/loss": loss.item(), "train/loss_bce": loss1.item(), "train/loss_iou": loss2.item()}
                 except:
                     batch_metrics = {"train/loss": 0, "train/loss_bce": 0, "train/loss_iou": 0}
-                    print(target.item(), output.item())
+                    print(target.cpu().numpy())
             else:
                 batch_metrics = {"train/loss": loss.item()}
             for name, metric in self.metrics.items():
