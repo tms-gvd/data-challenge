@@ -81,7 +81,7 @@ class Trainer(BaseTrainer):
                 y_true = torch.sort(torch.topk(target.clone(), 4).indices, dim=1).values
                 loss1 = bce(output, target)
                 loss2 = iou(y_preds, y_true)
-                loss = loss1 +  -.1 * loss2
+                loss = loss1 - 5 * loss2
             else:
                 loss = self.criterion(output, target)
             loss.backward()
@@ -168,7 +168,7 @@ class Trainer(BaseTrainer):
                     y_true = torch.sort(torch.topk(target.clone(), 4).indices, dim=1).values
                     loss1 = bce(output, target)
                     loss2 = iou(y_preds, y_true)
-                    loss = loss1 + -.1 * loss2
+                    loss = loss1 + 5 * loss2
                 else:
                     loss = self.criterion(output, target)
 
